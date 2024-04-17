@@ -1,7 +1,16 @@
+from time import strftime, localtime
+
 import cv2
 import numpy as np
 from ultralytics import YOLO
-from time import strftime, localtime
+
+
+def undistort_image(image, camera_matrix, distortion_coeffs):
+    h, w = image.shape[:2]
+    new_camera_matrix, roi = cv2.getOptimalNewCameraMatrix(camera_matrix, distortion_coeffs, (w, h), 1, (w, h))
+    undistorted_image = cv2.undistort(image, camera_matrix, distortion_coeffs, None, new_camera_matrix)
+    return undistorted_image
+
 
 # Load the YOLOv8 model
 title = 'SUSU Parking'
@@ -14,6 +23,7 @@ video_path = "https://cdn.cams.is74.ru/hls/playlists/multivariant.m3u8?uuid=5206
 cap = cv2.VideoCapture(video_path)
 
 # Loop through the video frames
+mask = cv2.imread("result_images/mask.png")
 frame_count = 1
 show_frame = 2500
 alpha = 0.4
@@ -22,19 +32,48 @@ while cap.isOpened():
     success, frame = cap.read()
     if success:
         frame_count -= 1
+        camera_matrix = np.array([[2179, 0, 1433],
+                                  [0, 2049, 606],
+                                  [0, 0, 1]])
+        distortion_coeffs = np.array([0.48787777, -3.47110869, -0.09418035, -0.03887175, 6.42096464])
+
+        # Исправление искажения
+        frame = undistort_image(frame, camera_matrix, distortion_coeffs)
         h, w = frame.shape[0], frame.shape[1]
-        frame = frame[int(h * 0.49):int(h * 0.895), int(w * 0.16):int(w * 0.87)]  # focus frame only on parking
+        frame = frame[int(h * 0.409):int(h * 0.8), int(w * 0.08):int(w * 0.9)]  # focus frame only on parking
+
         if frame_count == 0:
             # Run YOLOv8 inference on the frame
             annotated_frame = frame.copy()  # copy frame for save original frame
             overlay = frame.copy()
-            seg_results = seg_model.predict(annotated_frame, classes=classes, imgsz=3200, iou=0.5, conf=0.3)
 
-            curr_time = strftime('%Y.%m.%d %H:%M:%S', localtime())  # current local time
+            seg_results = seg_model.predict(cv2.bitwise_and(annotated_frame, mask), classes=classes, imgsz=3200,
+                                            iou=0.5, conf=0.2)
+
+            curr_time = strftime('%d.%m.%y %H:%M:%S', localtime())  # current local time
             # Visualize the results on the frame
             for index, (box, seg) in enumerate(zip(seg_results[0].boxes.xyxy, seg_results[0].masks.xy)):
-                cv2.fillPoly(overlay, np.int32([seg]), (0, 0, 255, 255*alpha))
+                cv2.fillPoly(overlay, np.int32([seg]), (0, 0, 255, 255 * alpha))
+
+            free_space = overlay.copy()
+            free_space[np.all(free_space == (0, 0, 255), axis=-1)] = (0, 0, 0)
+            free_space = cv2.bitwise_and(mask, free_space)
+            _, free_space = cv2.threshold(free_space, 1, 255, cv2.THRESH_BINARY)
+            # Создание прозрачного изображения с размерами исходного кадра
+            transparent_free_space = np.zeros_like(annotated_frame, dtype=np.uint8)
+
+            # Наложение маски free_space на прозрачное изображение
+            transparent_free_space[np.all(free_space == 255, axis=-1)] = (0, 255, 0)
+
+            # Наложение прозрачного free_space на annotated_frame
+            overlay_free = frame.copy()
+            overlay_free[np.all(transparent_free_space != 0, axis=-1)] = transparent_free_space[
+                np.all(transparent_free_space != 0, axis=-1)]
+
+            # Наложение overlay на annotated_frame с прозрачностью alpha
             annotated_frame = cv2.addWeighted(overlay, alpha, annotated_frame, 1 - alpha, 0)
+            annotated_frame = cv2.addWeighted(overlay_free, alpha, annotated_frame, 1 - alpha, 0)
+
             for index, (box, seg) in enumerate(zip(seg_results[0].boxes.xyxy, seg_results[0].masks.xy)):
                 # draw bboxes
                 cv2.rectangle(annotated_frame, np.int32([box[0], box[1]]), np.int32([box[2], box[3]]),
@@ -46,9 +85,9 @@ while cap.isOpened():
                 cv2.putText(annotated_frame, curr_time, (annotated_frame.shape[1] - 350, annotated_frame.shape[0] - 10),
                             cv2.FONT_HERSHEY_PLAIN, 2, [0, 255, 0], 2)
 
-
             # Display the annotated frame
             cv2.imshow(title, annotated_frame)
+            cv2.imshow('titl', transparent_free_space)
             frame_count = show_frame  # reset to zero value
 
             # Break the loop if 'q' is pressed
