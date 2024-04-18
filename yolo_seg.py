@@ -48,7 +48,7 @@ while cap.isOpened():
             overlay = frame.copy()
 
             seg_results = seg_model.predict(cv2.bitwise_and(annotated_frame, mask), classes=classes, imgsz=3200,
-                                            iou=0.5, conf=0.2)
+                                            iou=0.3, conf=0.2)
 
             curr_time = strftime('%d.%m.%y %H:%M:%S', localtime())  # current local time
             # Visualize the results on the frame
