@@ -52,27 +52,15 @@ while cap.isOpened():
 
             curr_time = strftime('%d.%m.%y %H:%M:%S', localtime())  # current local time
             # Visualize the results on the frame
+            contours, _ = cv2.findContours(cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY), cv2.RETR_TREE,
+                                           cv2.CHAIN_APPROX_SIMPLE)
+            free_space = cv2.fillPoly(overlay.copy(), contours, (0, 255, 0, 255 * alpha))
             for index, (box, seg) in enumerate(zip(seg_results[0].boxes.xyxy, seg_results[0].masks.xy)):
                 cv2.fillPoly(overlay, np.int32([seg]), (0, 0, 255, 255 * alpha))
-
-            free_space = overlay.copy()
-            free_space[np.all(free_space == (0, 0, 255), axis=-1)] = (0, 0, 0)
-            free_space = cv2.bitwise_and(mask, free_space)
-            _, free_space = cv2.threshold(free_space, 1, 255, cv2.THRESH_BINARY)
-            # Создание прозрачного изображения с размерами исходного кадра
-            transparent_free_space = np.zeros_like(annotated_frame, dtype=np.uint8)
-
-            # Наложение маски free_space на прозрачное изображение
-            transparent_free_space[np.all(free_space == 255, axis=-1)] = (0, 255, 0)
-
-            # Наложение прозрачного free_space на annotated_frame
-            overlay_free = frame.copy()
-            overlay_free[np.all(transparent_free_space != 0, axis=-1)] = transparent_free_space[
-                np.all(transparent_free_space != 0, axis=-1)]
-
+                cv2.fillPoly(free_space, np.int32([seg]), (0, 0, 0))
             # Наложение overlay на annotated_frame с прозрачностью alpha
             annotated_frame = cv2.addWeighted(overlay, alpha, annotated_frame, 1 - alpha, 0)
-            annotated_frame = cv2.addWeighted(overlay_free, alpha, annotated_frame, 1 - alpha, 0)
+            annotated_frame = cv2.addWeighted(free_space, alpha, annotated_frame, 1 - alpha, 0)
 
             for index, (box, seg) in enumerate(zip(seg_results[0].boxes.xyxy, seg_results[0].masks.xy)):
                 # draw bboxes
@@ -87,7 +75,6 @@ while cap.isOpened():
 
             # Display the annotated frame
             cv2.imshow(title, annotated_frame)
-            cv2.imshow('titl', transparent_free_space)
             frame_count = show_frame  # reset to zero value
 
             # Break the loop if 'q' is pressed
