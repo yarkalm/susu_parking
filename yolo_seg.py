@@ -12,6 +12,14 @@ def undistort_image(image, camera_matrix, distortion_coeffs):
     return undistorted_image
 
 
+# Функция для проверки пересечения двух прямоугольников
+def is_overlapping(rect1, rect2):
+    x1, y1, x2, y2 = rect1
+    x1_, y1_, x2_, y2_ = rect2
+    # Возвращает True, если прямоугольники пересекаются
+    return not (x2 <= x1_ or x1 >= x2_ or y2 <= y1_ or y1 >= y2_)
+
+
 # Load the YOLOv8 model
 title = 'SUSU Parking'
 seg_model = YOLO('yolov8s-seg.pt')
@@ -72,6 +80,53 @@ while cap.isOpened():
                 # put time
                 cv2.putText(annotated_frame, curr_time, (annotated_frame.shape[1] - 350, annotated_frame.shape[0] - 10),
                             cv2.FONT_HERSHEY_PLAIN, 2, [0, 255, 0], 2)
+
+            # Список прямоугольников, которые содержат только белые пиксели
+            white_rects = []
+
+            x = 0  # начальная координата x
+            y = 0  # начальная координата y
+
+            # Скользящее окно по изображению
+            while y < h-100:
+                while x < w:
+                    # Выбираем размер прямоугольника в зависимости от высоты
+                    if (170 < y < 230 and 330 < x < 1900) or (390 < y < 460 and 80 < x < 2100) or (
+                            500 < y and 150 < x < 2200):
+                        rect_height = 50
+                        rect_width = 110
+                    else:
+                        rect_height = 70
+                        rect_width = 50
+                    # Извлечение подмаски
+                    submask = free_space[y:y + rect_height, x:x + rect_width]
+
+                    # Проверка, содержит ли область только белые пиксели
+                    if np.all(submask == (0, 255, 0)):
+                        new_rect = (x, y, x + rect_width, y + rect_height)
+
+                        # Проверка, не пересекается ли с существующими прямоугольниками
+                        overlapping = any(is_overlapping(new_rect, existing) for existing in white_rects)
+
+                        if not overlapping:
+                            white_rects.append(new_rect)  # Добавление в список
+                            x += rect_width  # Двигаемся к следующей позиции
+                        else:
+                            x += 10  # Перемещаемся немного вправо, если пересекается
+                    else:
+                        x += 5  # Если не только белые пиксели, двигаемся вправо
+
+                # Обновляем координаты для следующей строки
+                x = 0
+                y += 5  # Перемещаемся на один пиксель вниз
+
+            overlay_parking = annotated_frame.copy()
+            for rect in white_rects:
+                x1, y1, x2, y2 = rect
+                cv2.rectangle(overlay_parking, (x1, y1), (x2, y2), (255, 0, 0), -1)
+                cv2.rectangle(overlay_parking, (x1, y1), (x2, y2), (0, 0, 255), 2)
+            annotated_frame = cv2.addWeighted(overlay_parking, alpha, annotated_frame, 1 - alpha, 0)
+
 
             # Display the annotated frame
             cv2.imshow(title, annotated_frame)
