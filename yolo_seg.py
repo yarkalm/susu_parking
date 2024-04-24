@@ -33,7 +33,7 @@ cap = cv2.VideoCapture(video_path)
 # Loop through the video frames
 mask = cv2.imread("result_images/mask.png")
 frame_count = 1
-show_frame = 2500
+show_frame = 500
 alpha = 0.4
 while cap.isOpened():
     # Read a frame from the video
@@ -54,9 +54,10 @@ while cap.isOpened():
             # Run YOLOv8 inference on the frame
             annotated_frame = frame.copy()  # copy frame for save original frame
             overlay = frame.copy()
+            h, w = annotated_frame.shape[0], annotated_frame.shape[1]
 
-            seg_results = seg_model.predict(cv2.bitwise_and(annotated_frame, mask), classes=classes, imgsz=3200,
-                                            iou=0.3, conf=0.2)
+            seg_results = seg_model.predict(cv2.bitwise_and(annotated_frame, mask), classes=classes, imgsz=6400,
+                                            iou=0.2, conf=0.1)
 
             curr_time = strftime('%d.%m.%y %H:%M:%S', localtime())  # current local time
             # Visualize the results on the frame
@@ -88,15 +89,16 @@ while cap.isOpened():
             y = 0  # начальная координата y
 
             # Скользящее окно по изображению
-            while y < h-100:
+            while y < h:
                 while x < w:
                     # Выбираем размер прямоугольника в зависимости от высоты
-                    if (170 < y < 230 and 330 < x < 1900) or (390 < y < 460 and 80 < x < 2100) or (
-                            500 < y and 150 < x < 2200):
+                    if (int(h * 0.28) < y < int(h * 0.39) and int(w * 0.15) < x < int(w * 0.865)) or (
+                            int(h * 0.65) < y < int(h * 0.78) and int(w * 0.02) < x < int(w * 0.95)) or (
+                            int(h * 0.84) < y < int(h) and int(w * 0.065) < x < int(w * 1)):
                         rect_height = 50
                         rect_width = 110
                     else:
-                        rect_height = 70
+                        rect_height = 60
                         rect_width = 50
                     # Извлечение подмаски
                     submask = free_space[y:y + rect_height, x:x + rect_width]
@@ -127,7 +129,12 @@ while cap.isOpened():
                 cv2.rectangle(overlay_parking, (x1, y1), (x2, y2), (0, 0, 255), 2)
             annotated_frame = cv2.addWeighted(overlay_parking, alpha, annotated_frame, 1 - alpha, 0)
 
-
+            # cv2.rectangle(annotated_frame, (int(w * 0.15), int(h * 0.28)), (int(w * 0.865), int(h * 0.39)), (0, 0, 255),
+            #               3)
+            # cv2.rectangle(annotated_frame, (int(w * 0.02), int(h * 0.65)), (int(w * 0.95), int(h * 0.78)), (0, 0, 255),
+            #               3)
+            # cv2.rectangle(annotated_frame, (int(w * 0.065), int(h * 0.84)), (int(w * 1), int(h * 1)), (0, 0, 255),
+            #               3)
             # Display the annotated frame
             cv2.imshow(title, annotated_frame)
             frame_count = show_frame  # reset to zero value
