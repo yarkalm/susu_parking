@@ -43,14 +43,28 @@ while cap.isOpened():
             # Run YOLOv8 inference on the frame
             pred = model.predict(frame, classes=classes, imgsz=3200, iou=0.2, conf=0.5)[0]
             annotated_frame = frame.copy()
-            for index, box in enumerate(pred.boxes.xyxy):
-                if (box[3] - box[1]) * (box[2] - box[0]) <= 12000:
-                    box_image = frame[int(box[1]):int(box[3]), int(box[0]): int(box[2])]
-                    cv2.imwrite(f"dataset/{len(listdir('dataset'))}.jpg", box_image)
-                cv2.rectangle(annotated_frame, np.int32([box[0], box[1]]), np.int32([box[2], box[3]]),
-                              color=[255, 0, 0],
+            w, h = annotated_frame.shape[1], annotated_frame.shape[0]
+
+            for index, cls, box in zip(range(len(pred.boxes.xywhn)), pred.boxes.cls, pred.boxes.xywhn):
+                x1, y1 = np.int32([(box[0] - box[2] / 2) * w, (box[1] - box[3] / 2) * h])
+                x2, y2 = np.int32([(box[0] + box[2] - box[2] / 2) * w, (box[1] + box[3] - box[3] / 2) * h])
+
+                if 1000 <= ((x2 - x1) * (y2 - y1)) <= 12000:
+                    row = f"{int(cls)} {box[0]} {box[1]} {box[2]} {box[3]}"
+
+                    if index % 3 == 0:
+                        cv2.imwrite(f"dataset/val/images/{len(listdir('dataset/val/images'))}.jpg",
+                                    cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                        with open(f"dataset/val/labels/{len(listdir('dataset/val/labels'))}.txt", 'w') as f:
+                            f.write(row)
+                    else:
+                        cv2.imwrite(f"dataset/train/images/{len(listdir('dataset/train/images'))}.jpg",
+                                    cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                        with open(f"dataset/train/labels/{len(listdir('dataset/train/labels'))}.txt", 'w') as f:
+                            f.write(row)
+                cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color=[255, 0, 0],
                               thickness=2)
-                cv2.putText(annotated_frame, str(index), (int(box[0] + box[2]) // 2 - 10, int(box[1] + box[3]) // 2),
+                cv2.putText(annotated_frame, str(index), (int(box[0] * w) - 10, int(box[1] * h)),
                             cv2.FONT_HERSHEY_PLAIN, 1,
                             [255, 0, 0], 2)
             curr_time = strftime('%d.%m.%y %H:%M:%S', localtime())
