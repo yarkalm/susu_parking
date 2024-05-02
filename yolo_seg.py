@@ -88,17 +88,20 @@ while cap.isOpened():
             y = 0  # начальная координата y
 
             # Скользящее окно по изображению
-            while y < h:
+            while y < h - 50:
                 while x < w:
                     # Выбираем размер прямоугольника в зависимости от высоты
                     if (int(h * 0.28) < y < int(h * 0.39) and int(w * 0.15) < x < int(w * 0.865)) or (
-                            int(h * 0.65) < y < int(h * 0.78) and int(w * 0.02) < x < int(w * 0.95)) or (
+                            int(h * 0.65-40) < y < int(h * 0.78) and int(w * 0.02) < x < int(w * 0.95)) or (
                             int(h * 0.84) < y < int(h) and int(w * 0.065) < x < int(w * 1)):
-                        rect_height = 50
+                        rect_height = 60
                         rect_width = 110
+                    elif int(h * 0.4) < y < int(h * 0.6):
+                        rect_height = 70
+                        rect_width = 50
                     else:
                         rect_height = 60
-                        rect_width = 50
+                        rect_width = 47
                     # Извлечение подмаски
                     submask = free_space[y:y + rect_height, x:x + rect_width]
 
@@ -122,20 +125,21 @@ while cap.isOpened():
                 y += 5  # Перемещаемся на один пиксель вниз
 
             overlay_parking = annotated_frame.copy()
+            parking_lots = frame.copy()
             for rect in white_rects:
                 x1, y1, x2, y2 = rect
                 cv2.rectangle(overlay_parking, (x1, y1), (x2, y2), (255, 0, 0), -1)
                 cv2.rectangle(overlay_parking, (x1, y1), (x2, y2), (0, 0, 255), 2)
-            annotated_frame = cv2.addWeighted(overlay_parking, alpha, annotated_frame, 1 - alpha, 0)
 
-            # cv2.rectangle(annotated_frame, (int(w * 0.15), int(h * 0.28)), (int(w * 0.865), int(h * 0.39)), (0, 0, 255),
-            #               3)
-            # cv2.rectangle(annotated_frame, (int(w * 0.02), int(h * 0.65)), (int(w * 0.95), int(h * 0.78)), (0, 0, 255),
-            #               3)
-            # cv2.rectangle(annotated_frame, (int(w * 0.065), int(h * 0.84)), (int(w * 1), int(h * 1)), (0, 0, 255),
-            #               3)
+                cv2.rectangle(parking_lots, (x1, y1), (x2, y2), (0, 200, 0), -1)
+                cv2.rectangle(parking_lots, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            annotated_frame = cv2.addWeighted(overlay_parking, alpha, annotated_frame, 1 - alpha, 0)
+            parking_lots = cv2.addWeighted(parking_lots, alpha, frame.copy(), 1 - alpha, 0)
+
             # Display the annotated frame
-            cv2.imshow(title, annotated_frame)
+            cv2.rectangle(parking_lots, (0, int(h * 0.4)), (w, int(h * 0.6)), color=(255,0,0))
+            # cv2.imshow(title, annotated_frame)
+            cv2.imshow(title, parking_lots)
             frame_count = show_frame  # reset to zero value
 
             # Break the loop if 'q' is pressed
