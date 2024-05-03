@@ -31,6 +31,10 @@ cap = cv2.VideoCapture(video_path)
 
 # Loop through the video frames
 mask = cv2.imread("result_images/mask.png")
+park_ico = cv2.imread("parking.png")
+park_ico = cv2.cvtColor(park_ico, cv2.COLOR_RGBA2RGB)
+
+i_h, i_w = park_ico.shape[0], park_ico.shape[1]
 frame_count = 1
 show_frame = 500
 alpha = 0.4
@@ -92,7 +96,7 @@ while cap.isOpened():
                 while x < w:
                     # Выбираем размер прямоугольника в зависимости от высоты
                     if (int(h * 0.28) < y < int(h * 0.39) and int(w * 0.15) < x < int(w * 0.865)) or (
-                            int(h * 0.65-40) < y < int(h * 0.78) and int(w * 0.02) < x < int(w * 0.95)) or (
+                            int(h * 0.65 - 40) < y < int(h * 0.78) and int(w * 0.02) < x < int(w * 0.95)) or (
                             int(h * 0.84) < y < int(h) and int(w * 0.065) < x < int(w * 1)):
                         rect_height = 60
                         rect_width = 110
@@ -125,21 +129,56 @@ while cap.isOpened():
                 y += 5  # Перемещаемся на один пиксель вниз
 
             overlay_parking = annotated_frame.copy()
+            parking_boxes = frame.copy()
             parking_lots = frame.copy()
             for rect in white_rects:
                 x1, y1, x2, y2 = rect
+
                 cv2.rectangle(overlay_parking, (x1, y1), (x2, y2), (255, 0, 0), -1)
                 cv2.rectangle(overlay_parking, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
-                cv2.rectangle(parking_lots, (x1, y1), (x2, y2), (0, 200, 0), -1)
-                cv2.rectangle(parking_lots, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.rectangle(parking_boxes, (x1, y1), (x2, y2), (0, 200, 0), -1)
+                cv2.rectangle(parking_boxes, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+                # Adjust bounds
+                x2 = min(x2, w)
+                y2 = min(y2, h)
+
+                # Determine scaling factor for icon
+                rect_width = x2 - x1
+                rect_height = y2 - y1
+                scale_factor = min(rect_width / i_w, rect_height / i_h)
+
+                # Resize park_ico while maintaining proportions
+                resized_park_ico = cv2.resize(
+                    park_ico,
+                    (int(i_w * scale_factor), int(i_h * scale_factor))
+                )
+
+                # Coordinates for resized icon in parking_lots
+                icon_height, icon_width = resized_park_ico.shape[:2]
+                y_start = y1
+                x_start = x1
+                y_end = y1 + icon_height
+                x_end = x1 + icon_width
+
+                # Check if within bounds
+                if x_end <= w and y_end <= h:
+                    parking_lots[y_start:y_end, x_start:x_end, :] = resized_park_ico
+
             annotated_frame = cv2.addWeighted(overlay_parking, alpha, annotated_frame, 1 - alpha, 0)
-            parking_lots = cv2.addWeighted(parking_lots, alpha, frame.copy(), 1 - alpha, 0)
+            parking_boxes = cv2.addWeighted(parking_boxes, alpha, frame.copy(), 1 - alpha, 0)
 
             # Display the annotated frame
-            cv2.rectangle(parking_lots, (0, int(h * 0.4)), (w, int(h * 0.6)), color=(255,0,0))
-            # cv2.imshow(title, annotated_frame)
-            cv2.imshow(title, parking_lots)
+            cv2.imshow(title + ' Annotate',
+                       cv2.resize(annotated_frame, (annotated_frame.shape[1] // 2, annotated_frame.shape[0] // 2)))
+            cv2.imwrite('result_images/annotated_frame.jpg', annotated_frame)
+
+            cv2.imshow(title + ' Bboxes', cv2.resize(parking_boxes, (parking_boxes.shape[1]//2, parking_boxes.shape[0]//2)))
+            cv2.imwrite('result_images/parking_boxes.jpg', parking_boxes)
+
+            cv2.imshow(title + ' Icons', cv2.resize(parking_lots, (parking_lots.shape[1]//2, parking_lots.shape[0]//2)))
+            cv2.imwrite('result_images/parking_lots.jpg', parking_lots)
             frame_count = show_frame  # reset to zero value
 
             # Break the loop if 'q' is pressed
