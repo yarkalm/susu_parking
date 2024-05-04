@@ -14,7 +14,7 @@ types_to_photo = {value: key for key, value in photo_types.items()}
 
 
 @bot.message_handler(commands=['start'])
-def url(message):
+def start(message):
     print('start')
     markup = types.InlineKeyboardMarkup()
     btn1 = types.InlineKeyboardButton(
@@ -23,9 +23,9 @@ def url(message):
     markup.add(btn1)
 
     menu = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    c1 = types.KeyboardButton('/start')
-    c2 = types.KeyboardButton('/parking')
-    c3 = types.KeyboardButton('/lang')
+    c1 = types.KeyboardButton('Начальное приветствие')  # Замена /start
+    c2 = types.KeyboardButton('Показать парковку')  # Замена /parking
+    c3 = types.KeyboardButton('Изменить язык')  # Замена /lang
     menu.add(c1, c2, c3)
 
     bot.send_message(message.from_user.id,
@@ -41,7 +41,7 @@ def url(message):
 
 # Команда для выбора языка и установки меню
 @bot.message_handler(commands=['parking'])
-def send_welcome(message):
+def parking(message):
     print('parking')
     # Создаем меню с кнопками
     start_markup = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
@@ -83,16 +83,28 @@ def handle_language_choice(message):
         bot.send_message(message.chat.id, "You chose English. Hello!")
 
 
+# Обработка кнопок в меню
+@bot.message_handler(
+    func=lambda message: message.text in ["Начальное приветствие", "Показать парковку", "Изменить язык"])
+def handle_menu_buttons(message):
+    if message.text == "Начальное приветствие":
+        start(message)  # вызов команды /start
+    elif message.text == "Показать парковку":
+        parking(message)  # вызов команды /parking
+    elif message.text == "Изменить язык":
+        choose_lang(message)  # вызов команды /lang
+
+
 # Обработка отправки фото по кнопке в меню
 @bot.message_handler(func=lambda message: message.text in photo_types.values())
 def send_photo(message):
+    print("send_photo")
     # Указываем путь к файлу изображения
     annotated_image = '../result_images/annotated_frame.jpg'
     parking_boxes = '../result_images/parking_boxes.jpg'
     parking_lots = '../result_images/parking_lots.jpg'
     orig_image = '../result_images/frame.jpg'
 
-    image = orig_image
     type_image = types_to_photo[message.text].split('_')[1]
 
     if type_image == 'ann':
