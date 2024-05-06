@@ -23,18 +23,21 @@ def start(message):
     markup.add(btn1)
 
     menu = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
-    c1 = types.KeyboardButton('Начальное приветствие')  # Замена /start
-    c2 = types.KeyboardButton('Показать парковку')  # Замена /parking
-    c3 = types.KeyboardButton('Изменить язык')  # Замена /lang
+    c1 = types.KeyboardButton('Начальное приветствие' if lang else 'Welcome')  # Замена /start
+    c2 = types.KeyboardButton('Показать парковку' if lang else 'Show parking')  # Замена /parking
+    c3 = types.KeyboardButton('Изменить язык' if lang else 'Change language')  # Замена /lang
     menu.add(c1, c2, c3)
 
     bot.send_message(message.from_user.id,
-                     '👋Приветствую! Данный бот создан благодаря "А поныть?" от Unlock. Бот покажет вам свободные места на парковке ГУК ЮУрГУ.',
+                     '👋Приветствую! Данный бот создан благодаря "А поныть?" от Unlock. Бот покажет вам свободные '
+                     'места на парковке ГУК ЮУрГУ.' if lang else "👋Greetings! This bot was created thanks to 'And "
+                                                                 "whine?' from Unlock. The bot will show you the "
+                                                                 "available parking spaces at the SUSU.",
                      reply_markup=markup)
 
     bot.send_message(
         message.chat.id,
-        "Выберите действие",
+        "Выберите действие" if lang else 'Choose action',
         reply_markup=menu
     )
 
@@ -54,7 +57,7 @@ def parking(message):
     start_markup.add(annotated, parking_bboxes, parking_icons)  # Добавляем кнопку для отправки фото в меню
     bot.send_message(
         message.chat.id,
-        "Выберите тип",
+        "Выберите тип" if lang else "Choose type",
         reply_markup=start_markup
     )
 
@@ -75,6 +78,8 @@ def choose_lang(message):
 # Обработка выбора языка
 @bot.message_handler(func=lambda message: message.text in ["🇷🇺 Русский", "🇬🇧 English"])
 def handle_language_choice(message):
+    print('lang')
+    global lang
     if message.text == "🇷🇺 Русский":
         bot.send_message(message.chat.id, "Вы выбрали русский язык. Привет!")
         lang = True
@@ -85,13 +90,14 @@ def handle_language_choice(message):
 
 # Обработка кнопок в меню
 @bot.message_handler(
-    func=lambda message: message.text in ["Начальное приветствие", "Показать парковку", "Изменить язык"])
+    func=lambda message: message.text in ["Начальное приветствие", "Показать парковку", "Изменить язык", "Welcome",
+                                          "Show parking", "Change Language"])
 def handle_menu_buttons(message):
-    if message.text == "Начальное приветствие":
+    if (message.text == "Начальное приветствие") or (message.text == "Welcome"):
         start(message)  # вызов команды /start
-    elif message.text == "Показать парковку":
+    elif (message.text == "Показать парковку") or (message.text == "Show parking"):
         parking(message)  # вызов команды /parking
-    elif message.text == "Изменить язык":
+    elif (message.text == "Изменить язык") or (message.text == "Change language"):
         choose_lang(message)  # вызов команды /lang
 
 
@@ -120,7 +126,10 @@ def send_photo(message):
         with open(image, 'rb') as photo:
             bot.send_photo(message.chat.id, photo)
     except FileNotFoundError:
-        bot.send_message(message.chat.id, "Извините, файл не найден. Пожалуйста, убедитесь, что он существует.")
+        bot.send_message(message.chat.id,
+                         "Извините, файл не найден. Пожалуйста, убедитесь, что он существует." if lang else 'Sorry. '
+                                                                                                            'File is '
+                                                                                                            'not found')
 
 
 # Запуск бота
