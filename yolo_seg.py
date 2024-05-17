@@ -137,8 +137,8 @@ while cap.isOpened():
                 cv2.rectangle(overlay_parking, (x1, y1), (x2, y2), (255, 0, 0), -1)
                 cv2.rectangle(overlay_parking, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
-                cv2.rectangle(parking_boxes, (x1, y1), (x2, y2), (0, 200, 0), -1)
-                cv2.rectangle(parking_boxes, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.rectangle(parking_boxes, (x1, y1), (x2, y2), (0, 255, 0), -1)
+                cv2.rectangle(parking_boxes, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
                 # Adjust bounds
                 x2 = min(x2, w)
