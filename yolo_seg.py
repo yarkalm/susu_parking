@@ -168,16 +168,20 @@ while cap.isOpened():
 
             annotated_frame = cv2.addWeighted(overlay_parking, alpha, annotated_frame, 1 - alpha, 0)
             parking_boxes = cv2.addWeighted(parking_boxes, alpha, frame.copy(), 1 - alpha, 0)
+            cv2.putText(parking_boxes, curr_time, (parking_boxes.shape[1] - 350, parking_boxes.shape[0] - 10),
+                        cv2.FONT_HERSHEY_PLAIN, 2, [0, 255, 0], 2)
+            cv2.putText(parking_lots, curr_time, (parking_lots.shape[1] - 350, parking_lots.shape[0] - 10),
+                        cv2.FONT_HERSHEY_PLAIN, 2, [0, 255, 0], 2)
 
             # Display the annotated frame
-            cv2.imshow(title + ' Annotate',
-                       cv2.resize(annotated_frame, (annotated_frame.shape[1] // 2, annotated_frame.shape[0] // 2)))
+            # cv2.imshow(title + ' Annotate',
+            #            cv2.resize(annotated_frame, (annotated_frame.shape[1] // 2, annotated_frame.shape[0] // 2)))
             cv2.imwrite('result_images/annotated_frame.jpg', annotated_frame)
 
-            cv2.imshow(title + ' Bboxes', cv2.resize(parking_boxes, (parking_boxes.shape[1]//2, parking_boxes.shape[0]//2)))
+            # cv2.imshow(title + ' Bboxes', cv2.resize(parking_boxes, (parking_boxes.shape[1]//2, parking_boxes.shape[0]//2)))
             cv2.imwrite('result_images/parking_boxes.jpg', parking_boxes)
 
-            cv2.imshow(title + ' Icons', cv2.resize(parking_lots, (parking_lots.shape[1]//2, parking_lots.shape[0]//2)))
+            # cv2.imshow(title + ' Icons', cv2.resize(parking_lots, (parking_lots.shape[1]//2, parking_lots.shape[0]//2)))
             cv2.imwrite('result_images/parking_lots.jpg', parking_lots)
             frame_count = show_frame  # reset to zero value
 
