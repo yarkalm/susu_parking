@@ -22,6 +22,7 @@ def is_overlapping(rect1, rect2):
 # Load the YOLOv8 model
 title = 'SUSU Parking'
 seg_model = YOLO('yolov8s-seg.pt')
+seg_model.to('cpu')
 classes = [2, 3, 5, 7]  # car, motorcycle, bus, truck
 
 # Open the video file
@@ -76,6 +77,7 @@ while cap.isOpened():
 
             for index, (box, seg) in enumerate(zip(seg_results[0].boxes.xyxy, seg_results[0].masks.xy)):
                 # draw bboxes
+                box = box.cpu().numpy()
                 cv2.rectangle(annotated_frame, np.int32([box[0], box[1]]), np.int32([box[2], box[3]]),
                               color=[0, 255, 0])
                 # put text indexes
